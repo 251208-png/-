@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>바다로 가는 대중교통 길찾기 서비스</title>
+  
+  <!-- CSS 스타일 정의 -->
+  <style>
+    /* 전체 기본 설정 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+    }
+
+    /* 메인 컨테이너 (좌우 2분할) */
+    .container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* 왼쪽 사이드바 */
+    .sidebar {
+      width: 420px;
+      height: 100%;
+      background-color: #ffffff;
+      border-right: 1px solid #e9ecef;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+      position: relative;
+    }
+
+    /* 헤더 타이틀 */
+    .sidebar-header {
+      padding: 16px 20px 10px 20px;
+      background-color: #0b528f;
+      color: #ffffff;
+    }
+    .sidebar-header h2 {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    /* 검색 입력 영역 */
+    .search-section {
+      padding: 15px 20px;
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+      position: relative;
+    }
+
+    .input-field-group {
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .input-field-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #495057;
+      margin-bottom: 4px;
+    }
+    .input-field-group input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .input-field-group input:focus {
+      border-color: #0b528f;
+      box-shadow: 0 0 0 2px rgba(11, 82, 143, 0.2);
+    }
+
+    /* 실시간 검색어 추천 드롭다운 */
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border: 1px solid #ced4da;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 100;
+      list-style: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: none;
+    }
+    .autocomplete-item {
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f3f5;
+    }
+    .autocomplete-item:hover {
+      background-color: #e7f5ff;
+      color: #0b528f;
+    }
+
+    /* 도착 바다 카테고리 선택 영역 */
+    .category-select-group {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .category-select-group select {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 12px;
+      background-color: #fff;
+      color: #333;
+    }
+
+    /* 드롭다운 내 제목 옵션 연한 회색 설정 */
+    .category-select-group select option.select-title {
+      color: #868e96;
+      font-style: italic;
+    }
+
+    /* 길찾기 버튼 */
+    .search-submit-btn {
+      width: 100%;
+      padding: 10px;
+      background-color: #0b528f;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background-color 0.2s;
+    }
+    .search-submit-btn:hover {
+      background-color: #073863;
+    }
+
+    /* 탭 메뉴 */
+    .tab-menu {
+      display: flex;
+      background-color: #e9ecef;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 0;
+      border: none;
+      background: none;
+      font-size: 13px;
+      font-weight: bold;
+      color: #495057;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background-color: #ffffff;
+      color: #0b528f;
+      border-bottom: 3px solid #0b528f;
+    }
+
+    /* 결과 스크롤 목록 */
+    .route-results {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+      padding: 0;
+    }
+
+    /* 추천 경로 카드 */
+    .route-card {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e9ecef;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .route-card:hover {
+      background-color: #f1f3f5;
+    }
+    .route-card.selected {
+      background-color: #e7f5ff;
+      border-left: 4px solid #0b528f;
+    }
+
+    .route-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .route-time {
+      font-size: 18px;
+      font-weight: bold;
+      color: #0b528f;
+    }
+    .route-cost {
+      font-size: 14px;
+      font-weight: bold;
+      color: #495057;
+    }
+    .route-vehicles {
+      font-size: 13px;
+      color: #212529;
+      margin-bottom: 6px;
+    }
+
+    /* 상세 경로 박스 */
+    .route-details {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #ced4da;
+      font-size: 13px;
+    }
+    .detail-section-title {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 6px;
+    }
+    .step-list {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 10px;
+    }
+    .step-item {
+      position: relative;
+      padding-left: 18px;
+      margin-bottom: 6px;
+      line-height: 1.4;
+      color: #495057;
+    }
+    .step-item::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #0b528f;
+      font-weight: bold;
+    }
+
+    .info-breakdown {
+      background-color: #ffffff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #dee2e6;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .info-breakdown div {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    /* 오른쪽 지도 영역 */
+    .map-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 범례 안내 박스 */
+    .map-legend {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 5;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px 14px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      font-size: 12px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .legend-color {
+      width: 16px;
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    /* 안내 메시지 */
+    .info-message {
+      padding: 30px 20px;
+      text-align: center;
+      color: #6c757d;
+      font-size: 14px;
+    }
+  </style>
+
+  <!-- 카카오맵 JavaScript SDK -->
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d8c84161010ceb49246e8f88eb4d70a6&libraries=services"></script>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 왼쪽 사이드바 -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>🌊 바다 대중교통 길찾기</h2>
+      </div>
+
+      <!-- 검색 영역 -->
+      <div class="search-section">
+        <!-- 1. 출발점 입력 -->
+        <div class="input-field-group">
+          <label for="originInput">🚀 출발점 (건물명, 도로명 주소 등)</label>
+          <input type="text" id="originInput" placeholder="예: 서울역, 왕십리역" autocomplete="off">
+          <ul id="originAutocomplete" class="autocomplete-list"></ul>
+        </div>
+
+        <!-- 2. 도착 바다 입력 -->
+        <div class="input-field-group">
+          <label for="destinationInput">🏖️ 도착 바다 (검색 또는 카테고리 선택)</label>
+          <input type="text" id="destinationInput" placeholder="예: 경포해수욕장, 해운대" autocomplete="off">
+          <ul id="destinationAutocomplete" class="autocomplete-list"></ul>
+
+          <!-- 도착바다 2단계 카테고리 -->
+          <div class="category-select-group">
+            <select id="regionPrimarySelect" onchange="handlePrimaryRegionChange()">
+              <option value="" class="select-title">① 지역 선택</option>
+            </select>
+            <select id="seaSecondarySelect" onchange="handleSecondarySeaChange()">
+              <option value="" class="select-title">② 해변 선택</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="search-submit-btn" onclick="searchRoutes()">대중교통 경로 찾기</button>
+      </div>
+
+      <!-- 대중교통 탭 -->
+      <div class="tab-menu">
+        <button id="tabSubway" class="tab-btn active" onclick="switchTab('SUBWAY')">🚇 지하철/경전철로만 가기</button>
+        <button id="tabMulti" class="tab-btn" onclick="switchTab('MULTI')">🚆 여러 교통 수단으로 가기</button>
+      </div>
+
+      <!-- 경로 결과 목록 -->
+      <ul id="routeResultsList" class="route-results">
+        <li class="info-message">출발지와 도착 바다를 설정한 후 경로를 검색해주세요.</li>
+      </ul>
+    </div>
+
+    <!-- 오른쪽 지도 영역 -->
+    <div class="map-container">
+      <div id="map"></div>
+
+      <!-- 경로 선 범례 -->
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-color" style="background:#ff922b;"></div> 도보 (주황)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#339af0;"></div> 시내버스 (파랑)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#845ef7;"></div> 지하철 (보라)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#e03131;"></div> KTX / 기차 (빨강)</div>
+        <div class="legend-item"><div class="legend-color" style="background:#212529;"></div> 고속/시외버스 (검정)</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 전역 변수
+    let mapObject = null;
+    let placesService = null;
+    let infoWindowObject = null;
+
+    let selectedOriginLocation = null;
+    let selectedDestinationLocation = null;
+
+    let currentTabMode = 'SUBWAY';
+    let currentMapMarkers = [];
+    let currentMapPolylines = [];
+
+    // 카테고리 데이터
+    const SEA_CATEGORY_DATA = {
+      "강원도": ["경포해수욕장", "속초해수욕장", "낙산해수욕장", "안목해변", "양양 서피비치"],
+      "경기도": ["제부도 해수욕장", "궁평리해수욕장", "방아머리해변"],
+      "충청남도": ["대천해수욕장", "꽃지해수욕장", "만리포해수욕장"],
+      "전라남도": ["여수 만성리검은모래해변", "완도 명사십리해수욕장", "여수 모사금해수욕장"],
+      "경상북도": ["포항 영일대해수욕장", "영덕 영래해변", "경주 오류고아라해변"],
+      "경상남도": ["거제 학동몽돌해수욕장", "남해 상주은모래비치", "통영 비진도해수욕장"],
+      "전북특별자치도": ["변산해수욕장", "선유도해수욕장"],
+      "충청북도": ["충주호 (내륙 호수)"],
+      "제주특별자치도": ["협재해수욕장", "함덕해수욕장", "중문색달해변", "월정리해변"]
+    };
+
+    // 카카오맵 초기화
+    kakao.maps.load(function() {
+      const mapContainer = document.getElementById('map');
+      const mapOptions = {
+        center: new kakao.maps.LatLng(37.5665, 12
